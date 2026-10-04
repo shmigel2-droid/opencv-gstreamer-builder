@@ -32,11 +32,11 @@ jobs:
           git clone --depth 1 --branch 5.x $UrlCore opencv_source
           git clone --depth 1 --branch 5.x $UrlContrib opencv_contrib
 
-      # ФУНДАМЕНТАЛЬНЕ ВИПРАВЛЕННЯ: переносимо вміст opencv_source в корінь робочої папки GitHub
+      # ВИНЕСЕНЕ ВИПРАВЛЕННЯ: використовуємо надійне рекурсивне копіювання злиття папок
       - name: Prepare Root Directory for Build
         shell: powershell
         run: |
-          Move-Item -Path opencv_source\* -Destination . -Force
+          Copy-Item -Path opencv_source\* -Destination . -Recurse -Force
           Remove-Item -Path opencv_source -Recurse -Force
 
       - name: Install GStreamer (Windows)
@@ -60,7 +60,6 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_WINDOWS: AMD64
-          # Ми прибрали CIBW_PACKAGE_DIR, оскільки код тепер лежить безпосередньо в корені
           CIBW_BEFORE_BUILD: "pip install numpy ninja cmake scikit-build"
           CIBW_ENVIRONMENT: >
             CMAKE_ARGS="-DWITH_GSTREAMER=ON
