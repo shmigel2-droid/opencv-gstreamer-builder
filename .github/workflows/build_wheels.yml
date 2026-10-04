@@ -67,16 +67,11 @@ jobs:
             ..
           ninja
 
-      # ТЕПЕР ПРОСТО КОПІЮЄМО БІНАРНИК В ОКРЕМУ ПАПКУ ДЛЯ СКАЧУВАННЯ
-      - name: Export Ready Binary File
-        shell: powershell
-        run: |
-          mkdir ready_binary
-          Get-ChildItem -Path opencv/build -Filter "cv2*.pyd" -Recurse | Copy-Item -Destination ready_binary/cv2.pyd -Force
-
-      # ХМАРА ПРОСТО ВИДАСТЬ НАМ ZIP-АРХІВ З ФАЙЛОМ CV2.PYD
+      # ВИПРАВЛЕНО: Ми прибрали проміжний крок копіювання.
+      # Хмара сама знайде файл cv2.pyd рекурсивно за допомогою маски в полі path
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: opencv-5.x-windows-pyd-binary
-          path: ./ready_binary/cv2.pyd
+          path: opencv/build/**/cv2*.pyd
+          if-no-files-found: error # Якщо файл не знайдено, крок впаде з чітким логом
