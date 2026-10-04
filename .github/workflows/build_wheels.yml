@@ -53,14 +53,19 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_WINDOWS: AMD64
-          # ВКАЗУЄМО ДИРЕКТОРІЮ: змушуємо cibuildwheel збирати саме папку opencv
           CIBW_PACKAGE_DIR: opencv
+          
+          # ДОДАТКОВІ НАЛАШТУВАННЯ ЗБІРКИ:
+          # Встановлюємо обов'язкові інструменти (numpy, ninja, cmake) всередину КОЖНОГО ізольованого python-env перед збіркою
+          CIBW_BEFORE_BUILD: "pip install numpy ninja cmake scikit-build"
+          
           CIBW_ENVIRONMENT: >
             CMAKE_ARGS="-DWITH_GSTREAMER=ON
             -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules
             -DBUILD_EXAMPLES=OFF
             -DBUILD_opencv_apps=OFF
-            -DBUILD_opencv_world=ON"
+            -DBUILD_opencv_world=ON
+            -G Ninja"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
