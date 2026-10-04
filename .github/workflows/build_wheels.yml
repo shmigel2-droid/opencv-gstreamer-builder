@@ -56,6 +56,13 @@ jobs:
         run: |
           mkdir opencv/build
           cd opencv/build
+          
+          # Отримуємо точні шляхи до хмарного Python для передачі в CMake
+          \$PythonExe = (Get-Command python).Source
+          \$PythonLib = "(env:pythonLocation)\libs\python311.lib"
+          \$PythonInc = "(env:pythonLocation)\include"
+          
+          # Запускаємо CMake з ПРИМУСОВИМИ прапорцями збірки Python
           cmake -G "Ninja" `
             -D CMAKE_BUILD_TYPE=RELEASE `
             -D WITH_GSTREAMER=ON `
@@ -63,15 +70,17 @@ jobs:
             -D BUILD_EXAMPLES=OFF `
             -D BUILD_opencv_apps=OFF `
             -D BUILD_opencv_world=ON `
-            -D PYTHON3_EXECUTABLE=(Get-Command python).Source `
+            -D BUILD_opencv_python3=ON `
+            -D OPENCV_FORCE_PYTHON_LIBS=ON `
+            -D PYTHON3_EXECUTABLE=$PythonExe `
+            -D PYTHON3_LIBRARY=\$PythonLib `
+            -D PYTHON3_INCLUDE_DIR=$PythonInc `
             ..
           ninja
 
-      # ВИПРАВЛЕНО: Ми прибрали проміжний крок копіювання.
-      # Хмара сама знайде файл cv2.pyd рекурсивно за допомогою маски в полі path
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: opencv-5.x-windows-pyd-binary
           path: opencv/build/**/cv2*.pyd
-          if-no-files-found: error # Якщо файл не знайдено, крок впаде з чітким логом
+          if-no-files-found: error
