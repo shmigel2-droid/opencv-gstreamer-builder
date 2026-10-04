@@ -67,11 +67,22 @@ jobs:
             ..
           ninja
 
+      # ВИПРАВЛЕНО: Гнучкий рекурсивний пошук файлу cv2.pyd всередині папки opencv/build
       - name: Build Wheel Package
         shell: powershell
         run: |
           mkdir dist_wheel/cv2
-          Copy-Item -Path opencv/build/lib/python3/*.pyd -Destination dist_wheel/cv2/cv2.pyd -Force
+          
+          # Шукаємо файл cv2.pyd по всьому каталогу build і копіюємо його
+          \$PydFile = Get-ChildItem -Path opencv/build -Filter "cv2*.pyd" -Recurse | Select-Object -First 1
+          if (\$PydFile) {
+              Copy-Item -Path \$PydFile.FullName -Destination dist_wheel/cv2/cv2.pyd -Force
+              Write-Output "Успішно знайдено та скопійовано бінарник: (PydFile.FullName)"
+          } else {
+              Write-Error "Критична помилка: Файл cv2.pyd не знайдено в папці збірки!"
+              exit 1
+          }
+          
           echo "from .cv2 import *" > dist_wheel/cv2/__init__.py
           Copy-Item -Path setup.py -Destination dist_wheel/
           Copy-Item -Path pyproject.toml -Destination dist_wheel/
