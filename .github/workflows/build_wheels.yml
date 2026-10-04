@@ -18,55 +18,72 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Повертаємо чисте завантаження папок поруч
+      # 1. Захищене клонування через PowerShell
       - name: Clone OpenCV Core and Contrib
         shell: powershell
         run: |
-          $Domain = "github.com"
-          $CoreRepo = "opencv/opencv.git"
-          $ContribRepo = "opencv/opencv_contrib.git"
+          \$Domain = "github.com"
+          \$CoreRepo = "opencv/opencv.git"
+          \$ContribRepo = "opencv/opencv_contrib.git"
           
-          $UrlCore = "https://" + $Domain + "/" + $CoreRepo
-          $UrlContrib = "https://" + $Domain + "/" + $ContribRepo
-          
-          git clone --depth 1 --branch 5.x $UrlCore opencv
-          git clone --depth 1 --branch 5.x $UrlContrib opencv_contrib
+          git clone --depth 1 --branch 5.x ("https://" + Domain + "/" + CoreRepo) opencv
+          git clone --depth 1 --branch 5.x ("https://" + Domain + "/" + ContribRepo) opencv_contrib
 
+      # 2. Встановлення GStreamer на Windows-машину
       - name: Install GStreamer (Windows)
         shell: powershell
         run: |
           choco install gstreamer -y
-          echo "GSTREAMER_1_0_ROOT_MSVC_X86_64=C:\gstreamer\1.0\msvc_x86_64\" >> $env:GITHUB_ENV
-          echo "C:\gstreamer\1.0\msvc_x86_64\bin" >> $env:GITHUB_PATH
+          echo "GSTREAMER_1_0_ROOT_MSVC_X86_64=C:\gstreamer\1.0\msvc_x86_64\" >> \$env:GITHUB_ENV
+          echo "C:\gstreamer\1.0\msvc_x86_64\bin" >> \$env:GITHUB_PATH
 
+      # 3. Налаштування Python та інструментів збірки
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install cibuildwheel and build tools
+      # 4. Встановлюємо залежності розробника, необхідні для OpenCV
+      - name: Install Build Dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install cibuildwheel build
+          python -m pip install numpy ninja cmake setuptools wheel build scikit-build
 
-      - name: Build wheels via cibuildwheel
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ARCHS_WINDOWS: AMD64
-          # Збираємо ОФІЦІЙНИЙ python-пакет з папки opencv/modules/python
-          CIBW_PACKAGE_DIR: opencv/modules/python
-          
-          # Офіційний крок перед збіркою: встановлюємо залежності в оточення
-          CIBW_BEFORE_BUILD: "pip install numpy ninja cmake scikit-build"
-          
-          CIBW_ENVIRONMENT: >
-            CMAKE_ARGS="-DWITH_GSTREAMER=ON
-            -DOPENCV_EXTRA_MODULES_PATH=../../../opencv_contrib/modules
-            -DBUILD_EXAMPLES=OFF
-            -DBUILD_opencv_apps=OFF
-            -DBUILD_opencv_world=ON
-            -G Ninja"
+      # 5. ПРЯМА ЗБІРКА OPENCV ЧЕРЕЗ CMAKE ТА NINJA
+      - name: Compile OpenCV via CMake
+        shell: powershell
+        run: |
+          mkdir opencv/build
+          cd opencv/build
+          cmake -G "Ninja" `
+            -D CMAKE_BUILD_TYPE=RELEASE `
+            -D WITH_GSTREAMER=ON `
+            -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules `
+            -D BUILD_EXAMPLES=OFF `
+            -D BUILD_opencv_apps=OFF `
+            -D BUILD_opencv_world=ON `
+            -D PYTHON3_EXECUTABLE=(Get-Command python).Source `
+            ..
+          ninja
 
+      # 6. ПАКУВАННЯ У WHEEL
+      - name: Build Wheel Package
+        shell: powershell
+        run: |
+          # Копіюємо скомпільовану OpenCV у структуру папок нашого пакета
+          mkdir dist_wheel/cv2
+          Copy-Item -Path opencv/build/lib/python3/*.pyd -Destination dist_wheel/cv2/cv2.pyd -Force
+          echo "from .cv2 import *" > dist_wheel/cv2/__init__.py
+          
+          # Копіюємо наші файли setup.py та pyproject.toml всередину збірки
+          Copy-Item -Path setup.py -Destination dist_wheel/
+          Copy-Item -Path pyproject.toml -Destination dist_wheel/
+          
+          # Запускаємо офіційне пакування
+          cd dist_wheel
+          python -m build --wheel --outdir ../wheelhouse
+
+      # 7. ЗБЕРЕЖЕННЯ ГОТОВОГО ФАЙЛУ
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
