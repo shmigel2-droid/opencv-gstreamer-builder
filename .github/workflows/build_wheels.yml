@@ -21,12 +21,11 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Клонування розбито на два окремі кроки — це гарантує стабільність на Windows
       - name: Clone OpenCV Core
-        run: git clone --depth 1 --branch 5.x https://github.com/opencv/opencv.git opencv
+        run: git clone --depth 1 --branch 5.x https://github.com opencv
 
       - name: Clone OpenCV Contrib
-        run: git clone --depth 1 --branch 5.x https://github.com/opencv/opencv_contrib.git opencv_contrib
+        run: git clone --depth 1 --branch 5.x https://github.com opencv_contrib
 
       - name: Install GStreamer and Build Deps (Linux)
         if: matrix.os == 'ubuntu-24.04'
@@ -47,7 +46,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11' # Оновлено до 3.11 для повної відповідності вимогам cibuildwheel v3
 
       - name: Install cibuildwheel and build tools
         run: |
@@ -57,7 +56,9 @@ jobs:
       - name: Build wheels via cibuildwheel
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ARCHS: x86_64
+          # РОЗДІЛЯЄМО АРХІТЕКТУРИ: для Linux вказуємо x86_64, для Windows — AMD64
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_WINDOWS: AMD64
           CIBW_ENVIRONMENT: >
             CMAKE_ARGS="-DWITH_GSTREAMER=ON
             -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules
@@ -65,7 +66,6 @@ jobs:
             -DBUILD_opencv_apps=OFF
             -DBUILD_opencv_world=ON"
 
-      # Виправлено назву офіційної утиліти збереження артефактів на upload-artifact
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
