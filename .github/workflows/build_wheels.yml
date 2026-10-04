@@ -29,8 +29,15 @@ jobs:
           $UrlCore = "https://" + $Domain + "/" + $CoreRepo
           $UrlContrib = "https://" + $Domain + "/" + $ContribRepo
           
-          git clone --depth 1 --branch 5.x $UrlCore opencv
+          git clone --depth 1 --branch 5.x $UrlCore opencv_source
           git clone --depth 1 --branch 5.x $UrlContrib opencv_contrib
+
+      # ФУНДАМЕНТАЛЬНЕ ВИПРАВЛЕННЯ: переносимо вміст opencv_source в корінь робочої папки GitHub
+      - name: Prepare Root Directory for Build
+        shell: powershell
+        run: |
+          Move-Item -Path opencv_source\* -Destination . -Force
+          Remove-Item -Path opencv_source -Recurse -Force
 
       - name: Install GStreamer (Windows)
         shell: powershell
@@ -53,12 +60,8 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_WINDOWS: AMD64
-          CIBW_PACKAGE_DIR: opencv
-          
-          # ДОДАТКОВІ НАЛАШТУВАННЯ ЗБІРКИ:
-          # Встановлюємо обов'язкові інструменти (numpy, ninja, cmake) всередину КОЖНОГО ізольованого python-env перед збіркою
+          # Ми прибрали CIBW_PACKAGE_DIR, оскільки код тепер лежить безпосередньо в корені
           CIBW_BEFORE_BUILD: "pip install numpy ninja cmake scikit-build"
-          
           CIBW_ENVIRONMENT: >
             CMAKE_ARGS="-DWITH_GSTREAMER=ON
             -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules
