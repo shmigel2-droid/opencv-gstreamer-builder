@@ -18,7 +18,7 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Захищений метод збирання адрес у PowerShell
+      # Повертаємо чисте завантаження папок поруч
       - name: Clone OpenCV Core and Contrib
         shell: powershell
         run: |
@@ -29,15 +29,8 @@ jobs:
           $UrlCore = "https://" + $Domain + "/" + $CoreRepo
           $UrlContrib = "https://" + $Domain + "/" + $ContribRepo
           
-          git clone --depth 1 --branch 5.x $UrlCore opencv_source
+          git clone --depth 1 --branch 5.x $UrlCore opencv
           git clone --depth 1 --branch 5.x $UrlContrib opencv_contrib
-
-      # ВИНЕСЕНЕ ВИПРАВЛЕННЯ: використовуємо надійне рекурсивне копіювання злиття папок
-      - name: Prepare Root Directory for Build
-        shell: powershell
-        run: |
-          Copy-Item -Path opencv_source\* -Destination . -Recurse -Force
-          Remove-Item -Path opencv_source -Recurse -Force
 
       - name: Install GStreamer (Windows)
         shell: powershell
@@ -60,10 +53,15 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_WINDOWS: AMD64
+          # Збираємо ОФІЦІЙНИЙ python-пакет з папки opencv/modules/python
+          CIBW_PACKAGE_DIR: opencv/modules/python
+          
+          # Офіційний крок перед збіркою: встановлюємо залежності в оточення
           CIBW_BEFORE_BUILD: "pip install numpy ninja cmake scikit-build"
+          
           CIBW_ENVIRONMENT: >
             CMAKE_ARGS="-DWITH_GSTREAMER=ON
-            -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules
+            -DOPENCV_EXTRA_MODULES_PATH=../../../opencv_contrib/modules
             -DBUILD_EXAMPLES=OFF
             -DBUILD_opencv_apps=OFF
             -DBUILD_opencv_world=ON
