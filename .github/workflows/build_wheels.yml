@@ -18,14 +18,15 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Безпечне клонування: передаємо параметри через нативні змінні env самого GitHub Actions
+      # Захищене клонування через примусовий Bash на Windows (гарантує стабільність лінків)
       - name: Clone OpenCV Core and Contrib
+        shell: bash
         env:
           LINK_CORE: "https://github.com"
           LINK_CONTRIB: "https://github.com"
         run: |
-          git clone --depth 1 --branch 5.x "%LINK_CORE%" opencv
-          git clone --depth 1 --branch 5.x "%LINK_CONTRIB%" opencv_contrib
+          git clone --depth 1 --branch 5.x "\$LINK_CORE" opencv
+          git clone --depth 1 --branch 5.x "\$LINK_CONTRIB" opencv_contrib
 
       - name: Install GStreamer (Windows)
         shell: powershell
