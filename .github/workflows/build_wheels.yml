@@ -21,8 +21,9 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Захищений метод клонування: збираємо адреси з безпечних частин тексту
+      # Примусово вказуємо shell: bash, щоб змінні працювали кросплатформово
       - name: Clone OpenCV 5.x source safely
+        shell: bash
         run: |
           URL_BASE="https://github.com"
           git clone --depth 1 --branch 5.x "${URL_BASE}/opencv/opencv.git"
