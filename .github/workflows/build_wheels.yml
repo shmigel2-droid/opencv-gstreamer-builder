@@ -51,13 +51,13 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install numpy ninja cmake setuptools wheel build scikit-build
 
-      # ВИПРАВЛЕНО: Пряма передача шляхів через env-змінні без створення внутрішніх \$ зміних
       - name: Compile OpenCV via CMake
         shell: powershell
         run: |
           mkdir opencv/build
           cd opencv/build
           
+          # Передаємо ТІЛЬКИ файл інтерпретатора. Решту шляхів CMake знайде САМ без помилок слешів!
           cmake -G "Ninja" `
             -D CMAKE_BUILD_TYPE=RELEASE `
             -D WITH_GSTREAMER=ON `
@@ -68,8 +68,6 @@ jobs:
             -D BUILD_opencv_python3=ON `
             -D OPENCV_FORCE_PYTHON_LIBS=ON `
             -D PYTHON3_EXECUTABLE="$env:pythonLocation\python.exe" `
-            -D PYTHON3_LIBRARY="\$env:pythonLocation\libs\python311.lib" `
-            -D PYTHON3_INCLUDE_DIR="$env:pythonLocation\include" `
             ..
           ninja
 
