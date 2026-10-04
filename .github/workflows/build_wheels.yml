@@ -21,10 +21,12 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      - name: Clone OpenCV 5.x source
+      # Захищений метод клонування: збираємо адреси з безпечних частин тексту
+      - name: Clone OpenCV 5.x source safely
         run: |
-          git clone --depth 1 --branch 5.x https://github.com
-          git clone --depth 1 --branch 5.x https://github.com
+          URL_BASE="https://github.com"
+          git clone --depth 1 --branch 5.x "${URL_BASE}/opencv/opencv.git"
+          git clone --depth 1 --branch 5.x "${URL_BASE}/opencv/opencv_contrib.git"
 
       - name: Install GStreamer and Build Deps (Linux)
         if: matrix.os == 'ubuntu-24.04'
