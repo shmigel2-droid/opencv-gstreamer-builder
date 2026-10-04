@@ -1,7 +1,7 @@
 name: Fast Pack Extracted PYD to Wheel
 
 on:
-  workflow_dispatch: # Дозволяє запускати вручну та завантажувати файл через браузер
+  workflow_dispatch:
 
 jobs:
   pack_wheel:
@@ -12,35 +12,29 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Хмара автоматично шукає скомпільований файл у вашій папці
       - name: Build Wheel Package from Local File
         shell: powershell
         run: |
-          # 1. Створюємо правильну структуру пакета
           mkdir dist_wheel/cv2
           
-          # 2. Перевіряємо, чи поклали файл у репозиторій
           if (Test-Path "cv2.pyd") {
               Copy-Item -Path "cv2.pyd" -Destination dist_wheel/cv2/cv2.pyd -Force
-              Write-Output "[ОК] Бінарник знайдено та перенесено в структуру."
+              Write-Output "Binary file found and moved successfully."
           } else {
-              Write-Error "[КРИТИЧНО] Файл cv2.pyd не знайдено в корені проєкту! Будь ласка, додайте його."
+              Write-Error "Critical error: cv2.pyd not found in the root directory!"
               exit 1
           }
           
-          # 3. Створюємо ініціалізацію та копіюємо конфіги
           echo "from .cv2 import *" > dist_wheel/cv2/__init__.py
           Copy-Item -Path setup.py -Destination dist_wheel/
           Copy-Item -Path pyproject.toml -Destination dist_wheel/
           
-          # 4. Встановлюємо інструменти пакування та запускаємо збірку (це займе 5 секунд)
           python -m pip install --upgrade pip
           python -m pip install build setuptools wheel
           
           cd dist_wheel
           python -m build --wheel --outdir ../wheelhouse
 
-      # Видаємо готове інсталяційне колесо
       - name: Upload Ready Wheel Artifact
         uses: actions/upload-artifact@v4
         with:
