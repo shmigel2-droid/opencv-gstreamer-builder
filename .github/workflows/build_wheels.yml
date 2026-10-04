@@ -21,11 +21,15 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      - name: Clone OpenCV Core
-        run: git clone --depth 1 --branch 5.x https://github.com opencv
-
-      - name: Clone OpenCV Contrib
-        run: git clone --depth 1 --branch 5.x https://github.com opencv_contrib
+      # Захищене клонування: передаємо параметри через окремі текстові змінні хмари
+      - name: Clone OpenCV 5.x source safely
+        env:
+          GH_HOST: "github.com"
+          OC_REPO: "opencv/opencv.git"
+          CB_REPO: "opencv/opencv_contrib.git"
+        run: |
+          git clone --depth 1 --branch 5.x "https://${GH_HOST}/${OC_REPO}" opencv
+          git clone --depth 1 --branch 5.x "https://${GH_HOST}/${CB_REPO}" opencv_contrib
 
       - name: Install GStreamer and Build Deps (Linux)
         if: matrix.os == 'ubuntu-24.04'
@@ -46,7 +50,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # Оновлено до 3.11 для повної відповідності вимогам cibuildwheel v3
+          python-version: '3.11'
 
       - name: Install cibuildwheel and build tools
         run: |
@@ -56,7 +60,6 @@ jobs:
       - name: Build wheels via cibuildwheel
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          # РОЗДІЛЯЄМО АРХІТЕКТУРИ: для Linux вказуємо x86_64, для Windows — AMD64
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_ENVIRONMENT: >
