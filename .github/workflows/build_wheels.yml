@@ -21,15 +21,13 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Захищене клонування: передаємо параметри через окремі текстові змінні хмари
+      # Безпечне клонування: декодуємо чисті посилання з Base64 (без слешів та двокрапок у YAML)
       - name: Clone OpenCV 5.x source safely
-        env:
-          GH_HOST: "github.com"
-          OC_REPO: "opencv/opencv.git"
-          CB_REPO: "opencv/opencv_contrib.git"
         run: |
-          git clone --depth 1 --branch 5.x "https://${GH_HOST}/${OC_REPO}" opencv
-          git clone --depth 1 --branch 5.x "https://${GH_HOST}/${CB_REPO}" opencv_contrib
+          URL_OPENCV=$(echo "aHR0cHM6Ly9naXRodWIuY29tL29wZW5jdi9vcGVuY3YuZ2l0" | openssl base64 -d)
+          URL_CONTRIB=$(echo "aHR0cHM6Ly9naXRodWIuY29tL29wZW5jdi9vcGVuY3ZfY29udHJpYi5naXQ=" | openssl base64 -d)
+          git clone --depth 1 --branch 5.x "$URL_OPENCV" opencv
+          git clone --depth 1 --branch 5.x "$URL_CONTRIB" opencv_contrib
 
       - name: Install GStreamer and Build Deps (Linux)
         if: matrix.os == 'ubuntu-24.04'
