@@ -18,12 +18,19 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Чистий нативний PowerShell для Windows без Linux-змінних
+      # Захищений метод: збираємо адресу з частин рядків прямо в PowerShell
       - name: Clone OpenCV Core and Contrib
         shell: powershell
         run: |
-          git clone --depth 1 --branch 5.x https://github.com opencv
-          git clone --depth 1 --branch 5.x https://github.com opencv_contrib
+          $Domain = "github.com"
+          $CoreRepo = "opencv/opencv.git"
+          $ContribRepo = "opencv/opencv_contrib.git"
+          
+          $UrlCore = "https://" + $Domain + "/" + $CoreRepo
+          $UrlContrib = "https://" + $Domain + "/" + $ContribRepo
+          
+          git clone --depth 1 --branch 5.x $UrlCore opencv
+          git clone --depth 1 --branch 5.x $UrlContrib opencv_contrib
 
       - name: Install GStreamer (Windows)
         shell: powershell
