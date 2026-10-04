@@ -67,23 +67,16 @@ jobs:
             ..
           ninja
 
-      # ВИПРАВЛЕНО: Пряме копіювання через рекурсивний пошук шляху без жодних змінних
-      - name: Build Wheel Package
+      # ТЕПЕР ПРОСТО КОПІЮЄМО БІНАРНИК В ОКРЕМУ ПАПКУ ДЛЯ СКАЧУВАННЯ
+      - name: Export Ready Binary File
         shell: powershell
         run: |
-          mkdir dist_wheel/cv2
-          
-          # Надійно знаходимо та копіюємо pyd-файл за маскою, обходячи будь-які папки
-          Get-ChildItem -Path opencv/build -Filter "cv2*.pyd" -Recurse | Copy-Item -Destination dist_wheel/cv2/cv2.pyd -Force
-          
-          echo "from .cv2 import *" > dist_wheel/cv2/__init__.py
-          Copy-Item -Path setup.py -Destination dist_wheel/
-          Copy-Item -Path pyproject.toml -Destination dist_wheel/
-          cd dist_wheel
-          python -m build --wheel --outdir ../wheelhouse
+          mkdir ready_binary
+          Get-ChildItem -Path opencv/build -Filter "cv2*.pyd" -Recurse | Copy-Item -Destination ready_binary/cv2.pyd -Force
 
-      - name: Upload artifacts
+      # ХМАРА ПРОСТО ВИДАСТЬ НАМ ZIP-АРХІВ З ФАЙЛОМ CV2.PYD
+      - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: opencv-5.x-gstreamer-windows-wheels
-          path: ./wheelhouse/*.whl
+          name: opencv-5.x-windows-pyd-binary
+          path: ./ready_binary/cv2.pyd
