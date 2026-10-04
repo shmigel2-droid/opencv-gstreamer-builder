@@ -18,15 +18,23 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Захищене клонування через примусовий Bash на Windows (гарантує стабільність лінків)
-      - name: Clone OpenCV Core and Contrib
-        shell: bash
-        env:
-          LINK_CORE: "https://github.com"
-          LINK_CONTRIB: "https://github.com"
-        run: |
-          git clone --depth 1 --branch 5.x "\$LINK_CORE" opencv
-          git clone --depth 1 --branch 5.x "\$LINK_CONTRIB" opencv_contrib
+      # Офіційний та безпечний метод завантаження ядра OpenCV без використання git clone
+      - name: Clone OpenCV Core
+        uses: actions/checkout@v4
+        with:
+          repository: opencv/opencv
+          ref: 5.x
+          path: opencv
+          fetch-depth: 1
+
+      # Офіційний та безпечний метод завантаження додаткових модулів
+      - name: Clone OpenCV Contrib
+        uses: actions/checkout@v4
+        with:
+          repository: opencv/opencv_contrib
+          ref: 5.x
+          path: opencv_contrib
+          fetch-depth: 1
 
       - name: Install GStreamer (Windows)
         shell: powershell
