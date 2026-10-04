@@ -21,11 +21,15 @@ jobs:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      # Універсальне клонування: явні шляхи, які підійдуть і для Bash, і для PowerShell
+      # Захищене клонування: передаємо параметри через змінні хмари
       - name: Clone OpenCV 5.x source safely
+        env:
+          GH_HOST: "github.com"
+          OC_REPO: "opencv/opencv.git"
+          CB_REPO: "opencv/opencv_contrib.git"
         run: |
-          git clone --depth 1 --branch 5.x https://github.com
-          git clone --depth 1 --branch 5.x https://github.com
+          git clone --depth 1 --branch 5.x "https://${GH_HOST}/${OC_REPO}"
+          git clone --depth 1 --branch 5.x "https://${GH_HOST}/${CB_REPO}"
 
       - name: Install GStreamer and Build Deps (Linux)
         if: matrix.os == 'ubuntu-24.04'
