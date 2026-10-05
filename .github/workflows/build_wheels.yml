@@ -1,4 +1,4 @@
-name: Build OpenCV 5.x GStreamer Windows Wheels
+name: Build OpenCV 5.x STATIC + GStreamer Bundle
 
 on:
   push:
@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_windows_wheels:
-    name: Build wheels on Windows
+  build_windows_bundle:
+    name: Build Bundle on Windows
     runs-on: windows-2025
 
     steps:
@@ -41,7 +41,6 @@ jobs:
           echo GSTREAMER_1_0_ROOT_MSVC_X86_64=C:\gstreamer\1.0\msvc_x86_64\>> %GITHUB_ENV%
           echo C:\gstreamer\1.0\msvc_x86_64\bin>> %GITHUB_PATH%
 
-      # ОНОВЛЕНО: Встановлюємо актуальну версію Python 3.12
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -72,10 +71,36 @@ jobs:
             ..
           ninja
 
-      # Експортуємо отриманий монолітний бінарник Python 3.12
-      - name: Upload Binary Artifact
+      # ФУНДАМЕНТАЛЬНИЙ КРОК: Збираємо всі файли GStreamer разом із OpenCV
+      - name: Prepare Portable Directory Bundle
+        shell: powershell
+        run: |
+          # 1. Створюємо фінальну папку cv2
+          mkdir bundle_output/cv2
+          
+          # 2. Переносимо туди скомпільовану статичну OpenCV
+          Get-ChildItem -Path opencv/build -Filter "cv2*.pyd" -Recurse | Copy-Item -Destination bundle_output/cv2/cv2.pyd -Force
+          
+          # 3. Скопіюємо ВСІ головні DLL-файли GStreamer прямо всередину папки cv2
+          # Це дозволить бінарнику підтягувати GStreamer безпосередньо зі своєї папки!
+          Copy-Item -Path C:\gstreamer\1.0\msvc_x86_64\bin\*.dll -Destination bundle_output/cv2/ -Force
+          
+          # 4. Створюємо розумний __init__.py, який автоматично реєструє власну папку з DLL при імпорті
+          \$InitContent = @'
+          import os
+          import sys
+          # Автоматично підтягуємо DLL-ки GStreamer, що лежать прямо в цій папці
+          current_dir = os.path.dirname(__file__)
+          if sys.platform == "win32" and os.path.exists(current_dir):
+              os.add_dll_directory(current_dir)
+          from .cv2 import *
+          '@
+          Set-Content -Path bundle_output/cv2/__init__.py -Value \$InitContent
+
+      # Завантажуємо повністю готову автономну збірку у хмару
+      - name: Upload Full Portable Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: opencv-5.x-windows-STATIC-pyd-py312
-          path: opencv/build/**/cv2*.pyd
+          name: opencv-5.x-gstreamer-PORTABLE-bundle-py312
+          path: ./bundle_output/cv2/
           if-no-files-found: error
