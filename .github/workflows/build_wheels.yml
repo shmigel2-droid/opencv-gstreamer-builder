@@ -1,4 +1,4 @@
-name: Build OpenCV 5.x STATIC + GStreamer Bundle
+name: Build OpenCV 4.x STATIC Pure Bundle
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   build_windows_bundle:
-    name: Build Bundle on Windows
+    name: Build Pure Static Bundle on Windows
     runs-on: windows-2025
 
     steps:
@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: opencv/opencv
-          ref: 5.x
+          ref: 4.x
           path: opencv
           fetch-depth: 1
 
@@ -30,21 +30,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: opencv/opencv_contrib
-          ref: 5.x
+          ref: 4.x
           path: opencv_contrib
           fetch-depth: 1
 
-      - name: Install GStreamer (Windows)
-        shell: cmd
-        run: |
-          choco install gstreamer -y
-          echo GSTREAMER_1_0_ROOT_MSVC_X86_64=C:\gstreamer\1.0\msvc_x86_64\>> %GITHUB_ENV%
-          echo C:\gstreamer\1.0\msvc_x86_64\bin>> %GITHUB_PATH%
-
+      # ОНОВЛЕНО: Перемикаємо хмарне оточення на Python 3.11
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Install Build Dependencies
         run: |
@@ -57,9 +51,10 @@ jobs:
           mkdir opencv/build
           cd opencv/build
           
+          # GStreamer вимкнено для початкового базового тесту ядра
           cmake -G "Ninja" `
             -D CMAKE_BUILD_TYPE=RELEASE `
-            -D WITH_GSTREAMER=ON `
+            -D WITH_GSTREAMER=OFF `
             -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules `
             -D BUILD_EXAMPLES=OFF `
             -D BUILD_opencv_apps=OFF `
@@ -71,35 +66,23 @@ jobs:
             ..
           ninja
 
-      # ВИПРАВЛЕНО: Пряме копіювання за масками шляхів без жодних змінних та дужок
-      - name: Prepare Portable Directory Bundle
+      - name: Prepare Pure Portable Bundle
         shell: powershell
         run: |
-          # 1. Створюємо фінальну папку cv2
           mkdir bundle_output/cv2
           
-          # 2. Переносимо туди скомпільовану статичну OpenCV
+          # Знаходимо чистий статичний pyd-файл
           Get-ChildItem -Path opencv/build -Filter "cv2*.pyd" -Recurse | Copy-Item -Destination bundle_output/cv2/cv2.pyd -Force
           
-          # 3. Копіюємо DLL-ки з усіх можливих шляхів встановлення Chocolatey в один рядок
-          Copy-Item -Path C:\tools\gstreamer\*\msvc_x86_64\bin\*.dll -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
-          Copy-Item -Path C:\gstreamer\*\msvc_x86_64\bin\*.dll -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
-          Copy-Item -Path "C:\Program Files\gstreamer\*\msvc_x86_64\bin\*.dll" -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
-          
-          # 4. Створюємо файл ініціалізації для автоматичного імпорту вбудованих DLL
+          # Створюємо базовий __init__.py для імпорту
           \$InitContent = @'
-          import os
-          import sys
-          current_dir = os.path.dirname(__file__)
-          if sys.platform == "win32" and os.path.exists(current_dir):
-              os.add_dll_directory(current_dir)
           from .cv2 import *
           '@
           Set-Content -Path bundle_output/cv2/__init__.py -Value \$InitContent
 
-      - name: Upload Full Portable Bundle
+      - name: Upload Pure Portable Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: opencv-5.x-gstreamer-PORTABLE-bundle-py312
+          name: opencv-4.x-PURE-STATIC-bundle-py311
           path: ./bundle_output/cv2/
           if-no-files-found: error
