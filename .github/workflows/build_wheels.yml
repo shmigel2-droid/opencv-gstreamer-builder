@@ -1,43 +1,81 @@
-name: Fast Pack Extracted PYD to Wheel
+name: Build OpenCV 5.x GStreamer Windows Wheels
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  pack_wheel:
-    name: Pack Wheel from Ready Binary
+  build_windows_wheels:
+    name: Build wheels on Windows
     runs-on: windows-2025
 
     steps:
       - name: Checkout project repository
         uses: actions/checkout@v4
 
-      - name: Build Wheel Package from Local File
+      - name: Clone OpenCV Core
+        uses: actions/checkout@v4
+        with:
+          repository: opencv/opencv
+          ref: 5.x
+          path: opencv
+          fetch-depth: 1
+
+      - name: Clone OpenCV Contrib
+        uses: actions/checkout@v4
+        with:
+          repository: opencv/opencv_contrib
+          ref: 5.x
+          path: opencv_contrib
+          fetch-depth: 1
+
+      - name: Install GStreamer (Windows)
+        shell: cmd
+        run: |
+          choco install gstreamer -y
+          echo GSTREAMER_1_0_ROOT_MSVC_X86_64=C:\gstreamer\1.0\msvc_x86_64\>> %GITHUB_ENV%
+          echo C:\gstreamer\1.0\msvc_x86_64\bin>> %GITHUB_PATH%
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Build Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy ninja cmake setuptools wheel build scikit-build
+
+      # СТАТИЧНА ЗБІРКА: Вимикаємо SHARED_LIBS, вмикаємо моноліт world
+      - name: Compile OpenCV via CMake
         shell: powershell
         run: |
-          mkdir dist_wheel/cv2
+          mkdir opencv/build
+          cd opencv/build
           
-          if (Test-Path "cv2.pyd") {
-              Copy-Item -Path "cv2.pyd" -Destination dist_wheel/cv2/cv2.pyd -Force
-              Write-Output "Binary file found and moved successfully."
-          } else {
-              Write-Error "Critical error: cv2.pyd not found in the root directory!"
-              exit 1
-          }
-          
-          echo "from .cv2 import *" > dist_wheel/cv2/__init__.py
-          Copy-Item -Path setup.py -Destination dist_wheel/
-          Copy-Item -Path pyproject.toml -Destination dist_wheel/
-          
-          python -m pip install --upgrade pip
-          python -m pip install build setuptools wheel
-          
-          cd dist_wheel
-          python -m build --wheel --outdir ../wheelhouse
+          cmake -G "Ninja" `
+            -D CMAKE_BUILD_TYPE=RELEASE `
+            -D WITH_GSTREAMER=ON `
+            -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules `
+            -D BUILD_EXAMPLES=OFF `
+            -D BUILD_opencv_apps=OFF `
+            -D BUILD_SHARED_LIBS=OFF `
+            -D BUILD_opencv_world=ON `
+            -D BUILD_opencv_python3=ON `
+            -D OPENCV_FORCE_PYTHON_LIBS=ON `
+            -D PYTHON3_EXECUTABLE="$env:pythonLocation\python.exe" `
+            ..
+          ninja
 
-      - name: Upload Ready Wheel Artifact
+      # Зберігаємо отриманий автономний файл
+      - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: opencv-5.x-windows-ready-wheel
-          path: ./wheelhouse/*.whl
+          name: opencv-5.x-windows-STATIC-pyd
+          path: opencv/build/**/cv2*.pyd
           if-no-files-found: error
