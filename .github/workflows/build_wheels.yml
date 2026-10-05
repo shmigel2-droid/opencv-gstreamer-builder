@@ -71,31 +71,25 @@ jobs:
             ..
           ninja
 
-      # Збираємо повністю портативну папку разом із вшитими DLL GStreamer
+      # ВИПРАВЛЕНО: Створення файлу __init__.py через прості однорядкові команди echo без змінних
       - name: Prepare Portable Directory Bundle
         shell: powershell
         run: |
-          # 1. Створюємо фінальну папку cv2
           mkdir bundle_output/cv2
           
-          # 2. Переносимо туди скомпільовану статичну OpenCV 4.x
           Get-ChildItem -Path opencv/build -Filter "cv2*.pyd" -Recurse | Copy-Item -Destination bundle_output/cv2/cv2.pyd -Force
           
-          # 3. Надійно копіюємо всі DLL-ки GStreamer 1.28.x безпосередньо всередину нашої папки cv2
           Copy-Item -Path C:\tools\gstreamer\*\msvc_x86_64\bin\*.dll -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
           Copy-Item -Path C:\gstreamer\*\msvc_x86_64\bin\*.dll -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
           Copy-Item -Path "C:\Program Files\gstreamer\*\msvc_x86_64\bin\*.dll" -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
           
-          # 4. Створюємо розумний файл ініціалізації для автоматичного імпорту вбудованих DLL з поточної папки
-          \$InitContent = @'
-          import os
-          import sys
-          current_dir = os.path.dirname(__file__)
-          if sys.platform == "win32" and os.path.exists(current_dir):
-              os.add_dll_directory(current_dir)
-          from .cv2 import *
-          '@
-          Set-Content -Path bundle_output/cv2/__init__.py -Value \$InitContent
+          # Записуємо ініціалізацію надійно рядок за рядком
+          echo "import os" > bundle_output/cv2/__init__.py
+          echo "import sys" >> bundle_output/cv2/__init__.py
+          echo "current_dir = os.path.dirname(__file__)" >> bundle_output/cv2/__init__.py
+          echo "if sys.platform == 'win32' and os.path.exists(current_dir):" >> bundle_output/cv2/__init__.py
+          echo "    os.add_dll_directory(current_dir)" >> bundle_output/cv2/__init__.py
+          echo "from .cv2 import *" >> bundle_output/cv2/__init__.py
 
       - name: Upload Full Portable Bundle
         uses: actions/upload-artifact@v4
