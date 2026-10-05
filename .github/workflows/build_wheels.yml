@@ -71,7 +71,7 @@ jobs:
             ..
           ninja
 
-      # ФУНДАМЕНТАЛЬНИЙ КРОК: Збираємо всі файли GStreamer разом із OpenCV
+      # ВИПРАВЛЕНО: Пряме копіювання за масками шляхів без жодних змінних та дужок
       - name: Prepare Portable Directory Bundle
         shell: powershell
         run: |
@@ -81,15 +81,15 @@ jobs:
           # 2. Переносимо туди скомпільовану статичну OpenCV
           Get-ChildItem -Path opencv/build -Filter "cv2*.pyd" -Recurse | Copy-Item -Destination bundle_output/cv2/cv2.pyd -Force
           
-          # 3. Скопіюємо ВСІ головні DLL-файли GStreamer прямо всередину папки cv2
-          # Це дозволить бінарнику підтягувати GStreamer безпосередньо зі своєї папки!
-          Copy-Item -Path C:\gstreamer\1.0\msvc_x86_64\bin\*.dll -Destination bundle_output/cv2/ -Force
+          # 3. Копіюємо DLL-ки з усіх можливих шляхів встановлення Chocolatey в один рядок
+          Copy-Item -Path C:\tools\gstreamer\*\msvc_x86_64\bin\*.dll -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
+          Copy-Item -Path C:\gstreamer\*\msvc_x86_64\bin\*.dll -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
+          Copy-Item -Path "C:\Program Files\gstreamer\*\msvc_x86_64\bin\*.dll" -Destination bundle_output/cv2/ -Force -ErrorAction SilentlyContinue
           
-          # 4. Створюємо розумний __init__.py, який автоматично реєструє власну папку з DLL при імпорті
+          # 4. Створюємо файл ініціалізації для автоматичного імпорту вбудованих DLL
           \$InitContent = @'
           import os
           import sys
-          # Автоматично підтягуємо DLL-ки GStreamer, що лежать прямо в цій папці
           current_dir = os.path.dirname(__file__)
           if sys.platform == "win32" and os.path.exists(current_dir):
               os.add_dll_directory(current_dir)
@@ -97,7 +97,6 @@ jobs:
           '@
           Set-Content -Path bundle_output/cv2/__init__.py -Value \$InitContent
 
-      # Завантажуємо повністю готову автономну збірку у хмару
       - name: Upload Full Portable Bundle
         uses: actions/upload-artifact@v4
         with:
