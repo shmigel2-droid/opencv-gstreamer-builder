@@ -41,17 +41,17 @@ jobs:
           echo GSTREAMER_1_0_ROOT_MSVC_X86_64=C:\gstreamer\1.0\msvc_x86_64\>> %GITHUB_ENV%
           echo C:\gstreamer\1.0\msvc_x86_64\bin>> %GITHUB_PATH%
 
+      # ОНОВЛЕНО: Встановлюємо актуальну версію Python 3.12
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Build Dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install numpy ninja cmake setuptools wheel build scikit-build
 
-      # СТАТИЧНА ЗБІРКА: Вимикаємо SHARED_LIBS, вмикаємо моноліт world
       - name: Compile OpenCV via CMake
         shell: powershell
         run: |
@@ -72,10 +72,10 @@ jobs:
             ..
           ninja
 
-      # Зберігаємо отриманий автономний файл
+      # Експортуємо отриманий монолітний бінарник Python 3.12
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: opencv-5.x-windows-STATIC-pyd
+          name: opencv-5.x-windows-STATIC-pyd-py312
           path: opencv/build/**/cv2*.pyd
           if-no-files-found: error
